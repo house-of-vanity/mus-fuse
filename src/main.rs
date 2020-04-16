@@ -1,23 +1,18 @@
 // Fuse staff
-#[cfg(target_family = "unix")]
 extern crate fuse;
 extern crate libc;
 extern crate time;
-
-#[cfg(target_family = "unix")]
 use fuse::{
     FileAttr, FileType, Filesystem, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, Request,
 };
-#[cfg(target_family = "unix")]
 use libc::ENOENT;
-#[cfg(target_family = "unix")]
+use reqwest::blocking::Client;
+use reqwest::header::CONTENT_LENGTH;
 use std::collections::BTreeMap;
-#[cfg(target_family = "unix")]
 use std::env;
-#[cfg(target_family = "unix")]
 use std::ffi::OsStr;
-#[cfg(target_family = "unix")]
 use time::Timespec;
+//use http::Method;
 
 // Download lib staff
 use percent_encoding::percent_decode_str;
@@ -73,6 +68,7 @@ struct JsonFilesystem {
     inodes: BTreeMap<String, u64>,
     buffer_data: Vec<u8>,
     buffer_name: String,
+    buffer_length: HashMap<String, i64>,
 }
 
 #[cfg(target_family = "unix")]
@@ -126,6 +122,7 @@ impl JsonFilesystem {
             inodes: inodes,
             buffer_data: Vec::new(),
             buffer_name: "".to_string(),
+            buffer_length: HashMap::new(),
         }
     }
 }
@@ -133,7 +130,7 @@ impl JsonFilesystem {
 #[cfg(target_family = "unix")]
 impl Filesystem for JsonFilesystem {
     fn getattr(&mut self, _req: &Request, ino: u64, reply: ReplyAttr) {
-        println!("getattr(ino={})", ino);
+        //println!("getattr(ino={})", ino);
         match self.attrs.get(&ino) {
             Some(attr) => {
                 let ttl = Timespec::new(1, 0);
@@ -144,7 +141,7 @@ impl Filesystem for JsonFilesystem {
     }
 
     fn lookup(&mut self, _req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
-        println!("lookup(parent={}, name={})", parent, name.to_str().unwrap());
+        //println!("lookup(parent={}, name={})", parent, name.to_str().unwrap());
         let inode = match self.inodes.get(name.to_str().unwrap()) {
             Some(inode) => inode,
             None => {
@@ -178,29 +175,53 @@ impl Filesystem for JsonFilesystem {
         let url = &self.tree[(ino - 2) as usize].path.as_ref().unwrap();
         let full_url = format!("{}/{}", API_URL, url);
         let mut full_track: Vec<u8> = Vec::new();
-        if self.buffer_name == full_url {
-            full_track = self.buffer_data.clone();
-            println!("Hit cache!");
-        } else {
-            let resp = reqwest::blocking::get(full_url.as_str()).unwrap();
-            let test = resp.bytes().unwrap();
-            full_track = test.to_vec().clone();
-            self.buffer_data = full_track.clone();
-            self.buffer_name = full_url;
-            println!("Miss cache!");
-        }
+        //if self.buffer_length[full_url] == full_url {
+        //full_track = self.buffer_data.clone();
+        //println!("Hit cache!");
+        //} else {
+        let client = Client::new();
+        //let req_builder = client.request(Method::GET, full_url.as_str());
+        let mut resp = client.head(full_url.as_str()).send().unwrap();
+        let content_length = resp
+            .headers()
+            .get(CONTENT_LENGTH)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .parse::<i64>()
+            .unwrap();
+        println!("Len {:?}", content_length);
+        let range = format!("bytes={}-{}", offset, offset - 1 + size as i64);
+        println!("Range: {:?}", range);
+        resp = client
+            .get(full_url.as_str())
+            .header("Range", &range)
+            .send()
+            .unwrap();
+        let test = resp.bytes().unwrap();
+        full_track = test.to_vec().clone();
+        //self.buffer_data = full_track.clone();
+        //self.buffer_name = full_url;
+        //println!("Miss cache!");
+        //}
+        /*
         let mut chunk_end = size as usize + offset as usize;
-        
-        if chunk_end >= full_track.len() {
-            chunk_end = full_track.len() - 1;
+        if chunk_end >= content_length {
+            chunk_end = content_length;
         }
-        if offset as usize >= full_track.len() {
-            reply.data(&full_track[(full_track.len() - 1) as usize..chunk_end as usize]);
+        if offset as usize >= content_length {
+            reply.data(&full_track[(content_length - 1) as usize..chunk_end as usize]);
         } else {
             reply.data(&full_track[offset as usize..chunk_end as usize]);
-        }
-        println!("Len: {}, chunk end {}", full_track.len(), chunk_end);
-        return
+        }*/
+        reply.data(&full_track);
+        println!(
+            "Len: {}, chunk {} - {}",
+            full_track.len(),
+            offset,
+            offset + size as i64
+        );
+        return;
     }
 
     fn readdir(
@@ -211,7 +232,7 @@ impl Filesystem for JsonFilesystem {
         offset: i64,
         mut reply: ReplyDirectory,
     ) {
-        println!("readdir(ino={}, fh={}, offset={})", ino, fh, offset);
+        //println!("readdir(ino={}, fh={}, offset={})", ino, fh, offset);
         if ino == 1 {
             if offset == 0 {
                 reply.add(1, 0, FileType::Directory, ".");
