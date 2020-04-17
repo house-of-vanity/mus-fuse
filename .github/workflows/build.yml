@@ -1,0 +1,23 @@
+name: Rust
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: cargo build --verbose --release
+    - name: Upload to release
+      uses: JasonEtco/upload-to-release@master
+      with:
+        args: target/release/mus_fuse application/x-pie-executable
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
