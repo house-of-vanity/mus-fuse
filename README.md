@@ -51,6 +51,7 @@ sudo yum install fuse-devel pkgconfig
 ```
 
 # How to use
+Here is a [binary release](https://github.com/house-of-vanity/mus_fuse/releases/latest) or compile it yourself.
 
 ```sh
 # Compile
