@@ -1,6 +1,6 @@
 # MusFuse
 
-[![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
+[![Build Status](https://github.com/house-of-vanity/mus_fuse/workflows/Build%20and%20publish/badge.svg)](https://github.com/house-of-vanity/mus_fuse/actions)
 
 MusFuse is a FUSE filesystem over HTTP for music. It is using [playongo](https://github.com/nixargh/playongo) media library. It's completely written in Rust stable.
 
