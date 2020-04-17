@@ -10,8 +10,8 @@ use reqwest::blocking::Client;
 use reqwest::blocking::Response;
 use reqwest::header::CONTENT_LENGTH;
 use std::collections::BTreeMap;
-use std::env;
 use std::ffi::OsStr;
+use std::env;
 use time::Timespec;
 //use http::Method;
 
@@ -34,6 +34,8 @@ pub struct Track {
 }
 
 const API_URL: &str = "https://mus.hexor.ru";
+const CACHE_HEAD: i64 = 1024 * 1024;
+const MAX_CACHE_SIZE: i64 = 10 * 1024 * 1025; // Mb
 
 fn get_basename(path: Option<&String>) -> Option<String> {
     let base = match percent_decode_str(path.unwrap().as_str()).decode_utf8() {
@@ -65,9 +67,7 @@ struct JsonFilesystem {
     tree: Vec<Track>,
     attrs: BTreeMap<u64, FileAttr>,
     inodes: BTreeMap<String, u64>,
-    buffer_data: Vec<u8>,
-    buffer_name: String,
-    req_counter: i32,
+    buffer_head: BTreeMap<String, Vec<u8>>,
     buffer_length: BTreeMap<String, i64>,
 }
 
@@ -99,7 +99,8 @@ impl JsonFilesystem {
             let basename = get_basename(track.path.as_ref()).unwrap().to_string();
             let attr = FileAttr {
                 ino: i as u64 + 2,
-                size: 1024 * 1024 * 1024 as u64,
+                //size: 1024 * 1024 * 1024 as u64,
+                size: 591646132,
                 blocks: 0,
                 atime: ts,
                 mtime: ts,
@@ -120,10 +121,8 @@ impl JsonFilesystem {
             tree: tree.clone(),
             attrs: attrs,
             inodes: inodes,
-            buffer_data: Vec::new(),
-            buffer_name: "".to_string(),
+            buffer_head: BTreeMap::new(),
             buffer_length: BTreeMap::new(),
-            req_counter: 0,
         }
     }
 }
@@ -172,7 +171,7 @@ impl Filesystem for JsonFilesystem {
             "read(ino={}, fh={}, offset={}, size={}) ",
             ino, fh, offset, size
         );
-        //let mus = fs::read("/home/ab/Downloads/Mizuki.mp3").unwrap();
+
         let url = &self.tree[(ino - 2) as usize].path.as_ref().unwrap();
         let id = &self.tree[(ino - 2) as usize].id.as_ref().unwrap();
         let full_url = format!("{}/{}", API_URL, url);
@@ -184,7 +183,7 @@ impl Filesystem for JsonFilesystem {
         // content_length cache.
         if self.buffer_length.contains_key(id.as_str()) {
             content_length = self.buffer_length[id.as_str()];
-            print!("Hit len cache! ");
+            print!("Hit LC ");
         } else {
             resp = client.head(full_url.as_str()).send().unwrap();
             content_length = resp
@@ -196,53 +195,93 @@ impl Filesystem for JsonFilesystem {
                 .parse::<i64>()
                 .unwrap();
             self.buffer_length.insert(id.to_string(), content_length);
-            print!("Miss len cache! ");
+            print!("Miss LC ");
         }
-        // Chink cache
-        /*
-        if self.buffer_name == id.as_str() {
-            chunk = self.buffer_data.clone();
-            print!("Hit content cache!");
-        } else {
-            let resp = reqwest::blocking::get(full_url.as_str()).unwrap();
+        print!("LC: {} ", self.buffer_length.len());
+        print!("HC: {} ", self.buffer_head.len());
+
+        if content_length > offset {
+            print!("Content len {:?} ", content_length);
+            let mut end_of_chunk = offset - 1 + size as i64;
+            let range = format!(
+                "bytes={}-{}",
+                offset,
+                if (end_of_chunk) > content_length {
+                    content_length
+                } else {
+                    end_of_chunk
+                }
+            );
+
+            // if it's beginning of file...
+            if (offset - 1 + size as i64) < CACHE_HEAD {
+                // cleaning cache before. it should be less than MAX_CACHE_SIZE bytes
+                if self.buffer_head.len() as i64 * CACHE_HEAD > MAX_CACHE_SIZE {
+                    let (key, _) = self.buffer_head.iter_mut().next().unwrap();
+                    let key_cpy: String = key.to_string();
+                    self.buffer_head.remove(&key_cpy);
+                    print!(" *Cache Cleaned* ");
+                }
+
+                // looking for CACHE_HEAD bytes file beginning in cache
+                if self.buffer_head.contains_key(id.as_str()) {
+                    print!("Hit head cache! ");
+                    chunk = self.buffer_head[id.as_str()]
+                        [offset as usize..(size + offset as u32) as usize]
+                        .to_vec()
+                        .clone();
+                    reply.data(&chunk);
+                } else {
+                    print!("Miss head cache! ");
+                    resp = client
+                        .get(full_url.as_str())
+                        .header(
+                            "Range",
+                            format!(
+                                "bytes=0-{}",
+                                if CACHE_HEAD > content_length {
+                                    content_length
+                                } else {
+                                    CACHE_HEAD
+                                }
+                            ),
+                        )
+                        .send()
+                        .unwrap();
+                    let response = resp.bytes().unwrap();
+                    self.buffer_head.insert(id.to_string(), response.to_vec());
+                    end_of_chunk = if content_length < end_of_chunk {
+                        content_length
+                    } else {
+                        end_of_chunk
+                    };
+                    chunk = response[offset as usize..end_of_chunk as usize].to_vec();
+                    reply.data(&chunk);
+                }
+                println!("Chunk len: {:?} ", chunk.len());
+                return;
+            }
+            resp = client
+                .get(full_url.as_str())
+                .header("Range", &range)
+                .send()
+                .unwrap();
             let test = resp.bytes().unwrap();
-            full_track = test.to_vec().clone();
-            self.buffer_data = full_track.clone();
-            self.buffer_name = full_url;
-            println!("Miss cache!");
-        }
-        */
-        print!("Len {:?} ", content_length);
-        let range = format!("bytes={}-{}", offset, offset - 1 + size as i64);
-        print!(" Range: {:?}", range);
-        resp = client
-            .get(full_url.as_str())
-            .header("Range", &range)
-            .send()
-            .unwrap();
-        let test = resp.bytes().unwrap();
-        chunk = test.to_vec().clone();
-        //self.buffer_data = full_track.clone();
-        //self.buffer_name = full_url;
-        //println!("Miss cache!");
-        //}
-        /*
-        let mut chunk_end = size as usize + offset as usize;
-        if chunk_end >= content_length {
-            chunk_end = content_length;
-        }
-        if offset as usize >= content_length {
-            reply.data(&full_track[(content_length - 1) as usize..chunk_end as usize]);
+            chunk = test.to_vec().clone();
+            reply.data(&chunk);
+            println!(
+                " Len: {}, Chunk {} - {}",
+                chunk.len(),
+                offset,
+                offset - 1 + chunk.len() as i64
+            );
         } else {
-            reply.data(&full_track[offset as usize..chunk_end as usize]);
-        }*/
-        reply.data(&chunk);
-        println!(
-            " Len: {}, chunk {} - {}",
-            chunk.len(),
-            offset,
-            offset + size as i64
-        );
+            println!(
+                "Wrong offset. Len is {} but offset {}",
+                content_length, offset
+            );
+            reply.data(&[]);
+        }
         return;
     }
 
