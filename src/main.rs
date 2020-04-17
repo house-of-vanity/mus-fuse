@@ -33,7 +33,6 @@ pub struct Track {
     pub path: Option<String>,
 }
 
-const API_URL: &str = "https://mus.hexor.ru";
 const CACHE_HEAD: i64 = 1024 * 1024;
 const MAX_CACHE_SIZE: i64 = 10 * 1024 * 1025; // Mb
 
@@ -53,8 +52,8 @@ fn get_basename(path: Option<&String>) -> Option<String> {
 }
 
 #[tokio::main]
-async fn get_tracks() -> Result<Vec<Track>, Box<dyn std::error::Error>> {
-    let resp = reqwest::get(format!("{}/songs", API_URL).as_str())
+async fn get_tracks(server: &String) -> Result<Vec<Track>, Box<dyn std::error::Error>> {
+    let resp = reqwest::get(format!("{}/songs", server).as_str())
         .await?
         .json::<Vec<Track>>()
         .await?;
@@ -64,6 +63,7 @@ async fn get_tracks() -> Result<Vec<Track>, Box<dyn std::error::Error>> {
 
 #[cfg(target_family = "unix")]
 struct JsonFilesystem {
+    server: String,
     tree: Vec<Track>,
     attrs: BTreeMap<u64, FileAttr>,
     inodes: BTreeMap<String, u64>,
@@ -73,7 +73,7 @@ struct JsonFilesystem {
 
 #[cfg(target_family = "unix")]
 impl JsonFilesystem {
-    fn new(tree: &Vec<Track>) -> JsonFilesystem {
+    fn new(tree: &Vec<Track>, server: String) -> JsonFilesystem {
         let mut attrs = BTreeMap::new();
         let mut inodes = BTreeMap::new();
         let ts = time::now().to_timespec();
@@ -118,6 +118,7 @@ impl JsonFilesystem {
             inodes.insert(basename.clone(), attr.ino);
         }
         JsonFilesystem {
+            server: server,
             tree: tree.clone(),
             attrs: attrs,
             inodes: inodes,
@@ -174,7 +175,7 @@ impl Filesystem for JsonFilesystem {
 
         let url = &self.tree[(ino - 2) as usize].path.as_ref().unwrap();
         let id = &self.tree[(ino - 2) as usize].id.as_ref().unwrap();
-        let full_url = format!("{}/{}", API_URL, url);
+        let full_url = format!("{}/{}", self.server, url);
         let mut chunk: Vec<u8>;
         let content_length: i64;
         let client = Client::new();
@@ -313,15 +314,22 @@ impl Filesystem for JsonFilesystem {
 }
 
 fn main() {
-    let lib = get_tracks().unwrap();
-    let fs = JsonFilesystem::new(&lib);
     let mountpoint = match env::args().nth(1) {
         Some(path) => path,
         None => {
-            println!("Usage: {} <MOUNTPOINT>", env::args().nth(0).unwrap());
+            println!("Usage: {} <MOUNTPOINT> <SERVER>", env::args().nth(0).unwrap());
             return;
         }
     };
+    let server = match env::args().nth(2) {
+        Some(server) => server,
+        None => {
+            println!("Usage: {} <MOUNTPOINT> <SERVER>", env::args().nth(0).unwrap());
+            return;
+        }
+    };
+    let lib = get_tracks(&server).unwrap();
+    let fs = JsonFilesystem::new(&lib, server);
     let options = ["-o", "ro", "-o", "fsname=musfs", "-o", "async_read"]
         .iter()
         .map(|o| o.as_ref())
