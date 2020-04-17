@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Pre-build
+      run: sudo apt install -y libfuse-dev pkg-config
     - uses: actions/checkout@v2
     - name: Build
       run: cargo build --verbose --release
@@ -21,3 +23,15 @@ jobs:
         args: target/release/mus_fuse application/x-pie-executable
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Upload to release
+      uses: JasonEtco/upload-to-release@master
+      with:
+        args: target/release/mus_fuse application/x-pie-executable
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+  
