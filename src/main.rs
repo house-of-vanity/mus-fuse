@@ -7,6 +7,7 @@ use fuse::{
 };
 use libc::ENOENT;
 use reqwest::blocking::Client;
+use reqwest::blocking::Response;
 use reqwest::header::CONTENT_LENGTH;
 use std::collections::BTreeMap;
 use std::env;
@@ -17,8 +18,6 @@ use time::Timespec;
 // Download lib staff
 use percent_encoding::percent_decode_str;
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
@@ -68,7 +67,8 @@ struct JsonFilesystem {
     inodes: BTreeMap<String, u64>,
     buffer_data: Vec<u8>,
     buffer_name: String,
-    buffer_length: HashMap<String, i64>,
+    req_counter: i32,
+    buffer_length: BTreeMap<String, i64>,
 }
 
 #[cfg(target_family = "unix")]
@@ -122,7 +122,8 @@ impl JsonFilesystem {
             inodes: inodes,
             buffer_data: Vec::new(),
             buffer_name: "".to_string(),
-            buffer_length: HashMap::new(),
+            buffer_length: BTreeMap::new(),
+            req_counter: 0,
         }
     }
 }
@@ -167,39 +168,60 @@ impl Filesystem for JsonFilesystem {
         size: u32,
         reply: ReplyData,
     ) {
-        println!(
-            "read(ino={}, fh={}, offset={}, size={})",
+        print!(
+            "read(ino={}, fh={}, offset={}, size={}) ",
             ino, fh, offset, size
         );
         //let mus = fs::read("/home/ab/Downloads/Mizuki.mp3").unwrap();
         let url = &self.tree[(ino - 2) as usize].path.as_ref().unwrap();
+        let id = &self.tree[(ino - 2) as usize].id.as_ref().unwrap();
         let full_url = format!("{}/{}", API_URL, url);
-        let mut full_track: Vec<u8> = Vec::new();
-        //if self.buffer_length[full_url] == full_url {
-        //full_track = self.buffer_data.clone();
-        //println!("Hit cache!");
-        //} else {
+        let mut chunk: Vec<u8>;
+        let content_length: i64;
         let client = Client::new();
-        //let req_builder = client.request(Method::GET, full_url.as_str());
-        let mut resp = client.head(full_url.as_str()).send().unwrap();
-        let content_length = resp
-            .headers()
-            .get(CONTENT_LENGTH)
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .parse::<i64>()
-            .unwrap();
-        println!("Len {:?}", content_length);
+        let mut resp: Response;
+
+        // content_length cache.
+        if self.buffer_length.contains_key(id.as_str()) {
+            content_length = self.buffer_length[id.as_str()];
+            print!("Hit len cache! ");
+        } else {
+            resp = client.head(full_url.as_str()).send().unwrap();
+            content_length = resp
+                .headers()
+                .get(CONTENT_LENGTH)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .parse::<i64>()
+                .unwrap();
+            self.buffer_length.insert(id.to_string(), content_length);
+            print!("Miss len cache! ");
+        }
+        // Chink cache
+        /*
+        if self.buffer_name == id.as_str() {
+            chunk = self.buffer_data.clone();
+            print!("Hit content cache!");
+        } else {
+            let resp = reqwest::blocking::get(full_url.as_str()).unwrap();
+            let test = resp.bytes().unwrap();
+            full_track = test.to_vec().clone();
+            self.buffer_data = full_track.clone();
+            self.buffer_name = full_url;
+            println!("Miss cache!");
+        }
+        */
+        print!("Len {:?} ", content_length);
         let range = format!("bytes={}-{}", offset, offset - 1 + size as i64);
-        println!("Range: {:?}", range);
+        print!(" Range: {:?}", range);
         resp = client
             .get(full_url.as_str())
             .header("Range", &range)
             .send()
             .unwrap();
         let test = resp.bytes().unwrap();
-        full_track = test.to_vec().clone();
+        chunk = test.to_vec().clone();
         //self.buffer_data = full_track.clone();
         //self.buffer_name = full_url;
         //println!("Miss cache!");
@@ -214,10 +236,10 @@ impl Filesystem for JsonFilesystem {
         } else {
             reply.data(&full_track[offset as usize..chunk_end as usize]);
         }*/
-        reply.data(&full_track);
+        reply.data(&chunk);
         println!(
-            "Len: {}, chunk {} - {}",
-            full_track.len(),
+            " Len: {}, chunk {} - {}",
+            chunk.len(),
             offset,
             offset + size as i64
         );
@@ -261,5 +283,9 @@ fn main() {
             return;
         }
     };
-    fuse::mount(fs, &mountpoint, &[]).expect("Couldn't mount filesystem");
+    let options = ["-o", "ro", "-o", "fsname=musfs", "-o", "async_read"]
+        .iter()
+        .map(|o| o.as_ref())
+        .collect::<Vec<&OsStr>>();
+    fuse::mount(fs, &mountpoint, &options).expect("Couldn't mount filesystem");
 }
