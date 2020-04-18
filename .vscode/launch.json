@@ -16,7 +16,7 @@
             },
             "args": [
                 "mnt",
-                "https://mus.hexor.ru"
+                "http://mus_.hexor.ru"
             ],
             "cwd": "${workspaceFolder}",
             "postDebugTask": "Umount FUSE",

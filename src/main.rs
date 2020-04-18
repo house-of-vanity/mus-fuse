@@ -10,8 +10,8 @@ use reqwest::blocking::Client;
 use reqwest::blocking::Response;
 use reqwest::header::CONTENT_LENGTH;
 use std::collections::BTreeMap;
-use std::ffi::OsStr;
 use std::env;
+use std::ffi::OsStr;
 use time::Timespec;
 //use http::Method;
 
@@ -31,6 +31,7 @@ pub struct Track {
     pub format: Option<String>,
     pub filetype: Option<String>,
     pub path: Option<String>,
+    pub Size: Option<i64>,
 }
 
 const CACHE_HEAD: i64 = 1024 * 1024;
@@ -95,12 +96,27 @@ impl JsonFilesystem {
         };
         attrs.insert(1, attr);
         inodes.insert("/".to_string(), 1);
+        let client = Client::new();
+        let mut resp: Response;
         for (i, track) in tree.iter().enumerate() {
             let basename = get_basename(track.path.as_ref()).unwrap().to_string();
+            /*
+                        let full_url = format!("{}/{}", server, track.path.as_ref().unwrap().to_string());
+                        resp = client.head(full_url.as_str()).send().unwrap();
+                        let content_length = resp
+                            .headers()
+                            .get(CONTENT_LENGTH)
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .parse::<u64>()
+                            .unwrap();
+                        println!("{} len is {}", basename, content_length);
+            */
             let attr = FileAttr {
                 ino: i as u64 + 2,
                 //size: 1024 * 1024 * 1024 as u64,
-                size: 591646132,
+                size: track.Size.unwrap() as u64,
                 blocks: 0,
                 atime: ts,
                 mtime: ts,
@@ -203,32 +219,29 @@ impl Filesystem for JsonFilesystem {
 
         if content_length > offset {
             print!("Content len {:?} ", content_length);
-            let mut end_of_chunk = offset - 1 + size as i64;
-            let range = format!(
-                "bytes={}-{}",
-                offset,
-                if (end_of_chunk) > content_length {
-                    content_length
-                } else {
-                    end_of_chunk
-                }
-            );
+            let end_of_chunk = if size - 1 + offset as u32 > content_length as u32 {
+                content_length
+            } else {
+                (size + offset as u32) as i64
+            };
+            let range = format!("bytes={}-{}", offset, end_of_chunk - 1);
 
             // if it's beginning of file...
-            if (offset - 1 + size as i64) < CACHE_HEAD {
+            if end_of_chunk < CACHE_HEAD {
                 // cleaning cache before. it should be less than MAX_CACHE_SIZE bytes
                 if self.buffer_head.len() as i64 * CACHE_HEAD > MAX_CACHE_SIZE {
                     let (key, _) = self.buffer_head.iter_mut().next().unwrap();
                     let key_cpy: String = key.to_string();
-                    self.buffer_head.remove(&key_cpy);
-                    print!(" *Cache Cleaned* ");
+                    if *key == key_cpy {
+                        self.buffer_head.remove(&key_cpy);
+                        print!(" *Cache Cleaned* ");
+                    }
                 }
 
                 // looking for CACHE_HEAD bytes file beginning in cache
                 if self.buffer_head.contains_key(id.as_str()) {
                     print!("Hit head cache! ");
-                    chunk = self.buffer_head[id.as_str()]
-                        [offset as usize..(size + offset as u32) as usize]
+                    chunk = self.buffer_head[id.as_str()][offset as usize..end_of_chunk as usize]
                         .to_vec()
                         .clone();
                     reply.data(&chunk);
@@ -241,9 +254,9 @@ impl Filesystem for JsonFilesystem {
                             format!(
                                 "bytes=0-{}",
                                 if CACHE_HEAD > content_length {
-                                    content_length
+                                    content_length - 1
                                 } else {
-                                    CACHE_HEAD
+                                    CACHE_HEAD - 1
                                 }
                             ),
                         )
@@ -251,11 +264,6 @@ impl Filesystem for JsonFilesystem {
                         .unwrap();
                     let response = resp.bytes().unwrap();
                     self.buffer_head.insert(id.to_string(), response.to_vec());
-                    end_of_chunk = if content_length < end_of_chunk {
-                        content_length
-                    } else {
-                        end_of_chunk
-                    };
                     chunk = response[offset as usize..end_of_chunk as usize].to_vec();
                     reply.data(&chunk);
                 }
@@ -274,7 +282,7 @@ impl Filesystem for JsonFilesystem {
                 " Len: {}, Chunk {} - {}",
                 chunk.len(),
                 offset,
-                offset - 1 + chunk.len() as i64
+                offset + chunk.len() as i64
             );
         } else {
             println!(
@@ -317,14 +325,20 @@ fn main() {
     let mountpoint = match env::args().nth(1) {
         Some(path) => path,
         None => {
-            println!("Usage: {} <MOUNTPOINT> <SERVER>", env::args().nth(0).unwrap());
+            println!(
+                "Usage: {} <MOUNTPOINT> <SERVER>",
+                env::args().nth(0).unwrap()
+            );
             return;
         }
     };
     let server = match env::args().nth(2) {
         Some(server) => server,
         None => {
-            println!("Usage: {} <MOUNTPOINT> <SERVER>", env::args().nth(0).unwrap());
+            println!(
+                "Usage: {} <MOUNTPOINT> <SERVER>",
+                env::args().nth(0).unwrap()
+            );
             return;
         }
     };
