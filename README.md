@@ -57,5 +57,18 @@ Here is a [binary release](https://github.com/house-of-vanity/mus_fuse/releases/
 # Compile
 $ cargo build --release
 # And run
+# to baypass Basic Auth set 
+# $HTTP_USER and $HTTP_PASS 
+# environment variables before run.
 $ ./target/release/musfuse <mountpoint> <server>
+# To get metrics
+$ cat <mountpoint>/METRICS.TXT
+http_requests: 1818
+ingress: 243595644
+hit_len_cache: 1878
+hit_data_cache: 82
+miss_len_cache: 11
+miss_data_cache: 11
+server_addr: https://mus.hexor.ru
+
 ```
