@@ -13,7 +13,7 @@ MusFuse is a FUSE filesystem over HTTP for music. It is using [playongo](https:/
   - Leverages Rust correctness.
   
 ## How to use
-Here is a [binary release](https://github.com/house-of-vanity/mus_fuse/releases/latest) or compile it yourself. Anyway mond about dependencies listed below.
+Here is a [binary release](https://github.com/house-of-vanity/mus_fuse/releases/latest) or compile it yourself. Anyway mind about dependencies listed below. Also there is a systemd unit file for managing service.
 
 ```sh
 # Compile
