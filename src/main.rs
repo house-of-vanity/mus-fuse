@@ -1,5 +1,3 @@
-// Fuse staff
-
 extern crate base64;
 extern crate fuse;
 extern crate libc;
@@ -19,13 +17,8 @@ use std::fmt;
 use time::Timespec;
 #[macro_use]
 extern crate log;
+use std::process;
 extern crate chrono;
-extern crate env_logger;
-
-use chrono::Local;
-use env_logger::Builder;
-use log::LevelFilter;
-use std::io::Write;
 
 // Download lib staff
 use percent_encoding::percent_decode_str;
@@ -453,18 +446,8 @@ impl Filesystem for JsonFilesystem {
 }
 
 fn main() {
-    Builder::new()
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "{} [{}] - {}",
-                Local::now().format("%Y-%m-%dT%H:%M:%S"),
-                record.level(),
-                record.args()
-            )
-        })
-        .filter(None, LevelFilter::Info)
-        .init();
+    env_logger::init();
+    info!("Logger initialized. Set RUST_LOG=[debug,error,info,warn,trace] Default: info");
     let mountpoint = match env::args().nth(1) {
         Some(path) => path,
         None => {
@@ -527,15 +510,29 @@ fn main() {
     let lib = match get_tracks(&server) {
         Ok(library) => library,
         Err(err) => {
-            panic!("Can't fetch library from remote server: {}", err);
+            error!("Can't fetch library from remote server. Probably server not running or auth failed.");
+            error!(
+                "Provide Basic Auth credentials by setting envs {} and {}",
+                http_user_var, http_pass_var
+            );
+            panic!("Error: {}", err);
         }
     };
     info!("Remote library host: {}", &server);
     let fs = JsonFilesystem::new(&lib, server);
-    let options = ["-o", "ro", "-o", "fsname=musfs", "-o", "sync_read"]
-        .iter()
-        .map(|o| o.as_ref())
-        .collect::<Vec<&OsStr>>();
+    let options = [
+        "-o",
+        "ro",
+        "-o",
+        "fsname=musfs",
+        "-o",
+        "sync_read",
+        "-o",
+        "auto_unmount",
+    ]
+    .iter()
+    .map(|o| o.as_ref())
+    .collect::<Vec<&OsStr>>();
 
     info!(
         "Caching {}B bytes in head of files.",
@@ -543,6 +540,15 @@ fn main() {
     );
     info!("Max cache is {} files.", MAX_CACHE_SIZE);
     info!("Mount options: {:?}", options);
-
-    fuse::mount(fs, &mountpoint, &options).expect("Couldn't mount filesystem");
+    let mut mount: fuse::BackgroundSession;
+    unsafe {
+        mount =
+            fuse::spawn_mount(fs, &mountpoint, &options).expect("Couldn't mount filesystem");
+    }
+    ctrlc::set_handler(move || {
+        println!("Exitting...");
+        process::exit(0x0000);
+    })
+    .expect("Error setting Ctrl-C handler");
+    loop {}
 }
