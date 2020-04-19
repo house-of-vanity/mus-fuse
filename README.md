@@ -11,6 +11,31 @@ MusFuse is a FUSE filesystem over HTTP for music. It is using [playongo](https:/
   - Any player can be used. (tested on [Cmus](https://github.com/cmus/cmus))
   - Using cache.
   - Leverages Rust correctness.
+  
+## How to use
+Here is a [binary release](https://github.com/house-of-vanity/mus_fuse/releases/latest) or compile it yourself. Anyway mond about dependencies listed below.
+
+```sh
+# Compile
+$ cargo build --release
+
+# And run
+# to baypass Basic Auth set 
+# $HTTP_USER and $HTTP_PASS 
+# environment variables before run.
+$ ./target/release/musfuse <mountpoint> <server>
+
+# To get metrics
+$ cat <mountpoint>/METRICS.TXT
+http_requests: 1818
+ingress: 243595644
+hit_len_cache: 1878
+hit_data_cache: 82
+miss_len_cache: 11
+miss_data_cache: 11
+server_addr: https://mus.hexor.ru
+
+```
 
 ## Dependencies
 
@@ -50,25 +75,4 @@ sudo apt-get install libfuse-dev pkg-config
 sudo yum install fuse-devel pkgconfig
 ```
 
-# How to use
-Here is a [binary release](https://github.com/house-of-vanity/mus_fuse/releases/latest) or compile it yourself.
 
-```sh
-# Compile
-$ cargo build --release
-# And run
-# to baypass Basic Auth set 
-# $HTTP_USER and $HTTP_PASS 
-# environment variables before run.
-$ ./target/release/musfuse <mountpoint> <server>
-# To get metrics
-$ cat <mountpoint>/METRICS.TXT
-http_requests: 1818
-ingress: 243595644
-hit_len_cache: 1878
-hit_data_cache: 82
-miss_len_cache: 11
-miss_data_cache: 11
-server_addr: https://mus.hexor.ru
-
-```
