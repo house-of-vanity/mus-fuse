@@ -75,7 +75,7 @@ pub struct Track {
     pub format: Option<String>,
     pub filetype: Option<String>,
     pub path: Option<String>,
-    pub Size: Option<i64>,
+    pub size: Option<i64>,
 }
 
 const CACHE_HEAD: i64 = 768 * 1024;
@@ -156,12 +156,12 @@ impl JsonFilesystem {
                 "Added inode: {} - {} [{}]",
                 i + 2,
                 basename,
-                track.Size.unwrap()
+                track.size.unwrap()
             );
-            total_size = total_size + track.Size.unwrap();
+            total_size = total_size + track.size.unwrap();
             let attr = FileAttr {
                 ino: i as u64 + 2,
-                size: track.Size.unwrap() as u64,
+                size: track.size.unwrap() as u64,
                 blocks: 0,
                 atime: ts,
                 mtime: ts,
