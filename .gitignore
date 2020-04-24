@@ -2,3 +2,4 @@
 Cargo.lock
 /mnt
 .vscode/
+*.sw?

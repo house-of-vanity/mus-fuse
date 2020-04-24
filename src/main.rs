@@ -20,6 +20,8 @@ use std::{
     fmt,
     path::Path,
     process,
+    thread::sleep,
+    time::Duration,
 };
 use fuse::{
     FileAttr, FileType, Filesystem, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, Request,
@@ -289,7 +291,7 @@ impl Filesystem for JsonFilesystem {
         let url = &self.tree[(ino - 2) as usize].path.as_ref().unwrap();
         let id = &self.tree[(ino - 2) as usize].id.as_ref().unwrap();
         let full_url = format!("{}{}", self.server, url);
-        let mut chunk: Vec<u8>;
+        let chunk: Vec<u8>;
         let content_length: i64;
         let client = Client::new();
 
@@ -576,14 +578,16 @@ fn main() {
     );
     info!("Max cache is {} files.", MAX_CACHE_SIZE);
     info!("Mount options: {:?}", options);
-    let mut mount: fuse::BackgroundSession;
+    let _mount: fuse::BackgroundSession;
     unsafe {
-        mount = fuse::spawn_mount(fs, &mountpoint, &options).expect("Couldn't mount filesystem");
+        _mount = fuse::spawn_mount(fs, &mountpoint, &options).expect("Couldn't mount filesystem");
     }
     ctrlc::set_handler(move || {
         println!("Exitting...");
         process::exit(0x0000);
     })
     .expect("Error setting Ctrl-C handler");
-    loop {}
+    loop {
+        sleep(Duration::from_millis(2));
+    }
 }
