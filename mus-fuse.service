@@ -2,12 +2,13 @@
 Description=Mount mus-fuse
 
 [Service]
-User=ab
 Type=simple
-Environment=HTTP_USER=user
-Environment=HTTP_PASS=pass
-ExecStart=/usr/bin/mus-fuse /MUS https://mus.hexor.ru
+RestartSec=5
+Restart=always
+Environment=HTTP_USER=<USER>
+Environment=HTTP_PASS=<PASS>
+ExecStart=/usr/local/bin/mus-fuse --mountpoint <PATH> --server <ADDRESS>
 KillSignal=SIGINT
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

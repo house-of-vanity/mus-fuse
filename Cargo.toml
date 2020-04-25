@@ -1,5 +1,5 @@
 [package]
-name = "musfuse"
+name = "mus-fuse"
 version = "0.6.0"
 authors = ["AB <ultradesu@hexor.ru>"]
 edition = "2018"

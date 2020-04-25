@@ -13,7 +13,7 @@ MusFuse is a FUSE filesystem over HTTP for music. It is using [playongo](https:/
   - Leverages Rust correctness.
   
 ## How to use
-Here is a [binary release](https://github.com/house-of-vanity/mus_fuse/releases/latest) or compile it yourself. Anyway mind about dependencies listed below. Also there is a systemd unit file for managing service.
+Here is a [binary release](https://github.com/house-of-vanity/mus_fuse/releases/latest) or compile it yourself. Anyway mind about dependencies listed below. Also there is a systemd unit file for managing service. Place it into `~/.config/systemd/user/mus-fuse.service`
 
 ```sh
 # Compile
@@ -23,7 +23,7 @@ $ cargo build --release
 # to baypass Basic Auth set 
 # $HTTP_USER and $HTTP_PASS 
 # environment variables before run.
-$ ./target/release/musfuse <mountpoint> <server>
+$ ./target/release/mus-fuse -m <mountpoint> -s <server>
 
 # To get metrics
 $ cat <mountpoint>/METRICS.TXT
