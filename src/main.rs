@@ -1,4 +1,5 @@
 extern crate base64;
+extern crate clap;
 extern crate fuse;
 extern crate libc;
 extern crate time;
@@ -6,12 +7,15 @@ extern crate time;
 extern crate log;
 extern crate chrono;
 
-
-use time::Timespec;
-use percent_encoding::percent_decode_str;
-use serde::Deserialize;
+use clap::{App, Arg};
+use env_logger::Env;
+use fuse::{
+    FileAttr, FileType, Filesystem, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, Request,
+};
 use libc::{EIO, ENOENT};
+use percent_encoding::percent_decode_str;
 use reqwest::{blocking::Client, header::CONTENT_LENGTH};
+use serde::Deserialize;
 use size_format::SizeFormatterBinary;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
@@ -23,10 +27,11 @@ use std::{
     thread::sleep,
     time::Duration,
 };
-use fuse::{
-    FileAttr, FileType, Filesystem, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, Request,
-};
+use time::Timespec;
 
+const CACHE_HEAD: i64 = 768 * 1024; // bytes from beginning of each file cached
+const MAX_CACHE_SIZE: i64 = 10; // Count of files cached
+static mut HTTP_AUTH: String = String::new();
 
 struct Metrics {
     http_requests: u64,
@@ -79,10 +84,6 @@ pub struct Track {
     pub path: Option<String>,
     pub size: Option<i64>,
 }
-
-const CACHE_HEAD: i64 = 768 * 1024;
-const MAX_CACHE_SIZE: i64 = 10; // Count
-static mut HTTP_AUTH: String = String::new();
 
 fn get_basename(path: Option<&String>) -> Option<String> {
     let base = match percent_decode_str(path.unwrap().as_str()).decode_utf8() {
@@ -200,7 +201,6 @@ impl JsonFilesystem {
         };
         attrs.insert(metrics_attr.ino, metrics_attr);
         inodes.insert("METRICS.TXT".to_string(), metrics_attr.ino);
-        warn!("Len: attrs: {}, ino: {}", attrs.len(), inodes.len());
         info!(
             "Filesystem initialized. Size: {} files, {}B in total.",
             inodes.len(),
@@ -484,28 +484,35 @@ impl Filesystem for JsonFilesystem {
 }
 
 fn main() {
-    env_logger::init();
+    env_logger::from_env(Env::default().default_filter_or("info")).init();
     info!("Logger initialized. Set RUST_LOG=[debug,error,info,warn,trace] Default: info");
-    let mountpoint = match env::args().nth(1) {
-        Some(path) => path,
-        None => {
-            println!(
-                "Usage: {} <MOUNTPOINT> <SERVER>",
-                env::args().nth(0).unwrap()
-            );
-            return;
-        }
-    };
-    let server = match env::args().nth(2) {
-        Some(server) => server,
-        None => {
-            println!(
-                "Usage: {} <MOUNTPOINT> <SERVER>",
-                env::args().nth(0).unwrap()
-            );
-            return;
-        }
-    };
+    let cli_args = App::new("mus-fuse")
+        .version(env!("CARGO_PKG_VERSION"))
+        .author(env!("CARGO_PKG_AUTHORS"))
+        .about("Mount FUSE filesystem with your own remote library.")
+        .arg(
+            Arg::with_name("server")
+                .short("s")
+                .long("server")
+                .value_name("SERVER")
+                .help("Sets a server hosting your library")
+                .required(true)
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("mountpoint")
+                .short("m")
+                .long("mountpoint")
+                .value_name("MOUNT POINT")
+                .help("Mount point for library.")
+                .required(true)
+                .takes_value(true),
+        )
+        .get_matches();
+
+    let server = cli_args.value_of("server").unwrap().to_string();
+    let mountpoint = cli_args.value_of("mountpoint").unwrap().to_string();
+
     unsafe {
         METRICS.server_addr = server.clone();
     }
@@ -588,6 +595,6 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
     loop {
-        sleep(Duration::from_millis(2));
+        sleep(Duration::from_millis(300));
     }
 }
