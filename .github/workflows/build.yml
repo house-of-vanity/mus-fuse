@@ -10,15 +10,17 @@ jobs:
     name: Upload Release Asset
     runs-on: ubuntu-latest
     steps:
+      - name: Setting version
+        run: ver=$(grep -m1 version Cargo.toml | awk '{gsub("\"", "", $NF); print $NF}')
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Pre-build
         run: sudo apt install -y libfuse-dev pkg-config && cargo install cargo-deb
       - uses: actions/checkout@v2
       - name: Build binary
-        run: cargo build --verbose --release
+        run: cargo build --release
       - name: Build deb
-        run: cargo deb
+        run: cargo deb --output ./target/debian/mus-fuse_${ver}_amd64.deb
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -37,7 +39,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
           asset_path: ./target/release/mus-fuse
-          asset_name: mus-fuse-${{ github.ref }}
+          asset_name: mus-fuse-${{ ver }}
           asset_content_type: application/x-pie-executable
       - name: Upload Release Deb
         id: upload-release-asset-deb
@@ -47,5 +49,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
           asset_path: ./target/debian/mus-fuse*.deb
-          asset_name: mus-fuse_${{ github.ref }}_amd64.deb
-          asset_content_type: application/x-pie-executable
+          asset_name: mus-fuse_${ver}_amd64.deb
+          asset_content_type: application/vnd.debian.binary-package
