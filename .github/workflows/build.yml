@@ -98,15 +98,15 @@ jobs:
           asset_path: ./mus-fuse/mus-fuse
           asset_name: mus-fuse
           asset_content_type: application/x-pie-executable;
-      - name: Upload Deb Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /home/runner/work/mus-fuse/mus-fuse/mus-fuse_amd64.deb
-          asset_name: mus-fuse_amd64.deb
-          asset_content_type: application/vnd.debian.binary-package;
+#     - name: Upload Deb Release
+#       uses: actions/upload-release-asset@v1
+#       env:
+#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       with:
+#         upload_url: ${{ steps.create_release.outputs.upload_url }}
+#         asset_path: /home/runner/work/mus-fuse/mus-fuse/mus-fuse_amd64.deb
+#         asset_name: mus-fuse_amd64.deb
+#         asset_content_type: application/vnd.debian.binary-package;
       - name: Upload Arch Linux Release
         uses: actions/upload-release-asset@v1
         env:
