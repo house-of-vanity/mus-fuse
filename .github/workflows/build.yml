@@ -13,10 +13,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Pre-build
-        run: sudo apt install -y libfuse-dev pkg-config
+        run: sudo apt install -y libfuse-dev pkg-config && cargo install cargo-deb
       - uses: actions/checkout@v2
-      - name: Build
+      - name: Build binary
         run: cargo build --verbose --release
+      - name: Build deb
+        run: cargo deb
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -27,13 +29,23 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-      - name: Upload Release Asset
-        id: upload-release-asset 
+      - name: Upload Release Bin
+        id: upload-release-asset-bin 
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
           asset_path: ./target/release/mus-fuse
-          asset_name: mus-fuse
+          asset_name: mus-fuse-${{ github.ref }}
+          asset_content_type: application/x-pie-executable
+      - name: Upload Release Deb
+        id: upload-release-asset-deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./target/debian/mus-fuse_${{ github.ref }}_amd64.deb
+          asset_name: mus-fuse_${{ github.ref }}_amd64.deb
           asset_content_type: application/x-pie-executable

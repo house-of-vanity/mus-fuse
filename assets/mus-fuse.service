@@ -3,11 +3,10 @@ Description=Mount mus-fuse
 
 [Service]
 Type=simple
+User=mus-fuse
 RestartSec=5
 Restart=always
-Environment=HTTP_USER=<USER>
-Environment=HTTP_PASS=<PASS>
-ExecStart=/usr/local/bin/mus-fuse --mountpoint <PATH> --server <ADDRESS>
+ExecStart=/usr/bin/mus-fuse --config /etc/mus-fuse.yml
 KillSignal=SIGINT
 
 [Install]

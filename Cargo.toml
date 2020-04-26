@@ -1,8 +1,13 @@
 [package]
 name = "mus-fuse"
-version = "0.6.0"
+version = "0.7.1"
 authors = ["AB <ultradesu@hexor.ru>"]
 edition = "2018"
+license = "WTFPL"
+readme = "README.md"
+description = """\
+Written safely in Rust, FUSE FS with your own private music library \
+hosted on your server securely."""
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
@@ -11,13 +16,31 @@ tokio = { version = "0.2", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 clap = {version = "2.33", features = ["yaml"]}
 serde_json = "1.0"
-percent-encoding = "2.1.0"
-fuse = "0.3.1"
-time = "0.1.42"
-libc = "0.2.69"
-chrono = "0.4.11"
-env_logger = "0.7.1"
+percent-encoding = "2.1"
+fuse = "0.3"
+time = "0.1"
+libc = "0.2"
+chrono = "0.4"
+env_logger = "0.7"
 log = { version = "^0.4.5", features = ["std"] }
-size_format = "1.0.2"
-base64 = "0.12.0"
-ctrlc = "3.1.4"
+size_format = "1.0"
+base64 = "0.12"
+ctrlc = "3.1"
+config = "0.9"
+
+[package.metadata.deb]
+maintainer = "AB <ultradesu@hexor.ru>"
+license-file = ["LICENSE", "0"]
+depends = "$auto, systemd, openssl, fuse"
+extended-description = """\
+Written safely in Rust, FUSE FS with your own private music library \
+hosted on your server securely."""
+section = "utilities"
+priority = "optional"
+maintainer-scripts = "assets/"
+conf-files = ["etc/mus-fuse.yml"]
+assets = [
+   ["assets/mus-fuse.service", "/usr/lib/systemd/system/mus-fuse.service", "644"],
+   ["target/release/mus-fuse", "usr/bin/", "755"],
+   ["assets/conf.yml", "etc/mus-fuse.yml", "644"],
+]

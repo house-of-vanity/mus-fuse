@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if systemctl | grep -Fq 'mus-fuse'; then    
+  sudo systemctl stop mus-fuse.service
+fi
+
+adduser --quiet --system --group --no-create-home --home /run/mus-fuse mus-fuse
+mkdir -p /srv/mus-fuse
+chown mus-fuse:mus-fuse /srv/mus-fuse
+

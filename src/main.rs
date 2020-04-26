@@ -6,6 +6,7 @@ extern crate time;
 #[macro_use]
 extern crate log;
 extern crate chrono;
+extern crate config;
 
 use clap::{App, Arg};
 use env_logger::Env;
@@ -29,9 +30,7 @@ use std::{
 };
 use time::Timespec;
 
-const CACHE_HEAD: i64 = 768 * 1024; // bytes from beginning of each file cached
-const MAX_CACHE_SIZE: i64 = 10; // Count of files cached
-static mut HTTP_AUTH: String = String::new();
+static mut HTTP_AUTH: String = String::new(); // Basic Auth string.
 
 struct Metrics {
     http_requests: u64,
@@ -126,11 +125,18 @@ struct JsonFilesystem {
     buffer_head_data: HashMap<u64, Vec<u8>>,
     buffer_length: BTreeMap<String, i64>,
     metrics_inode: u64,
+    cache_head: u64,
+    cache_max_count: u64,
 }
 
 #[cfg(target_family = "unix")]
 impl JsonFilesystem {
-    fn new(tree: &Vec<Track>, server: String) -> JsonFilesystem {
+    fn new(
+        tree: &Vec<Track>,
+        server: String,
+        cache_max_count: u64,
+        cache_head: u64,
+    ) -> JsonFilesystem {
         let mut attrs = BTreeMap::new();
         let mut inodes = BTreeMap::new();
         let ts = time::now().to_timespec();
@@ -215,6 +221,8 @@ impl JsonFilesystem {
             buffer_head_index: HashSet::new(),
             buffer_length: BTreeMap::new(),
             metrics_inode: metrics_inode,
+            cache_head: cache_head,
+            cache_max_count: cache_max_count,
         }
     }
 }
@@ -270,7 +278,7 @@ impl Filesystem for JsonFilesystem {
         }
 
         // cleaning cache
-        if self.buffer_head_index.len() > MAX_CACHE_SIZE as usize {
+        if self.buffer_head_index.len() > self.cache_max_count as usize {
             let mut iter = self.buffer_head_index.iter().filter(|&x| *x != ino);
             let old_entry = iter.next().unwrap();
             self.buffer_head_data.remove(old_entry);
@@ -351,7 +359,7 @@ impl Filesystem for JsonFilesystem {
             let range = format!("bytes={}-{}", offset, end_of_chunk - 1);
 
             // if it's beginning of file...
-            if end_of_chunk < CACHE_HEAD {
+            if end_of_chunk < self.cache_head as i64 {
                 // looking for CACHE_HEAD bytes file beginning in cache
                 if self.buffer_head_data.contains_key(&ino) {
                     // Cache found
@@ -378,10 +386,10 @@ impl Filesystem for JsonFilesystem {
                                 "Range",
                                 format!(
                                     "bytes=0-{}",
-                                    if CACHE_HEAD > content_length {
+                                    if self.cache_head as i64 > content_length {
                                         content_length - 1
                                     } else {
-                                        CACHE_HEAD - 1
+                                        self.cache_head as i64 - 1
                                     }
                                 ),
                             )
@@ -485,7 +493,7 @@ impl Filesystem for JsonFilesystem {
 
 fn main() {
     env_logger::from_env(Env::default().default_filter_or("info")).init();
-    info!("Logger initialized. Set RUST_LOG=[debug,error,info,warn,trace] Default: info");
+    // Parse opts and args
     let cli_args = App::new("mus-fuse")
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
@@ -494,58 +502,131 @@ fn main() {
             Arg::with_name("server")
                 .short("s")
                 .long("server")
-                .value_name("SERVER")
-                .help("Sets a server hosting your library")
-                .required(true)
+                .value_name("ADDRESS")
+                .help("Sets a server hosting your library with schema. (https or http)")
+                .required(false)
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("mountpoint")
                 .short("m")
                 .long("mountpoint")
-                .value_name("MOUNT POINT")
-                .help("Mount point for library.")
-                .required(true)
+                .value_name("PATH")
+                .help("Mount point for library")
+                .required(false)
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("conf")
+                .short("c")
+                .long("config")
+                .value_name("PATH")
+                .help("Config file to use")
+                .default_value("/etc/mus-fuse.yaml")
+                .required(false)
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("cache_max_count")
+                .long("cache-max")
+                .value_name("COUNT")
+                .help("How many files store in cache. [default: 10]")
+                .required(false)
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("cache_head")
+                .long("cache-head")
+                .value_name("KiB")
+                .help("How many KiB cache in file beginning for speeding up metadata requests. [default: 768]")
+                .required(false)
                 .takes_value(true),
         )
         .get_matches();
 
-    let server = cli_args.value_of("server").unwrap().to_string();
-    let mountpoint = cli_args.value_of("mountpoint").unwrap().to_string();
+    info!("Logger initialized. Set RUST_LOG=[debug,error,info,warn,trace] Default: info");
+    info!("Mus-Fuse {}", env!("CARGO_PKG_VERSION"));
+
+    // Read config file and env vars
+    let conf = cli_args.value_of("conf").unwrap();
+    let mut settings = config::Config::default();
+    settings = match settings.merge(config::File::with_name(conf)) {
+        Ok(conf_content) => {
+            info!("Using config file {}", conf);
+            conf_content.to_owned()
+        }
+        Err(e) => {
+            warn!("Can't read config file {}", e);
+            config::Config::default()
+        }
+    };
+    settings = match settings.merge(config::Environment::with_prefix("MUS")) {
+        Ok(conf) => conf.to_owned(),
+        Err(_) => config::Config::default(),
+    };
+    let http_user = match settings.get_str("http_user") {
+        Ok(u) => u,
+        Err(_) => {
+            info!("User for basic auth is not defined.");
+            String::new()
+        }
+    };
+    let http_pass = match settings.get_str("http_pass") {
+        Ok(u) => u,
+        Err(_) => {
+            info!("User for basic auth is not defined.");
+            String::new()
+        }
+    };
+    let server = match settings.get_str("server") {
+        Ok(server_cfg) => match cli_args.value_of("server") {
+            Some(server_opt) => server_opt.to_string(),
+            None => server_cfg,
+        },
+        Err(_) => match cli_args.value_of("server") {
+            Some(server_opt) => server_opt.to_string(),
+            None => {
+                error!("Server is not set in config nor via run options.");
+                process::exit(0x0001)
+            }
+        },
+    };
+    let mountpoint = match settings.get_str("mountpoint") {
+        Ok(mountpoint_cfg) => match cli_args.value_of("mountpoint") {
+            Some(mountpoint_opt) => mountpoint_opt.to_string(),
+            None => mountpoint_cfg,
+        },
+        Err(_) => match cli_args.value_of("mountpoint") {
+            Some(mountpoint_opt) => mountpoint_opt.to_string(),
+            None => {
+                error!("Mount point is not set in config nor via run options.");
+                process::exit(0x0001)
+            }
+        },
+    };
+    let cache_head = match settings.get_str("cache_head") {
+        Ok(cache_head_cfg) => match cli_args.value_of("cache_head") {
+            Some(cache_head_opt) => 1024 * cache_head_opt.parse::<u64>().unwrap(),
+            None => 1024 * cache_head_cfg.parse::<u64>().unwrap(),
+        },
+        Err(_) => match cli_args.value_of("cache_head") {
+            Some(cache_head_opt) => 1024 * cache_head_opt.parse::<u64>().unwrap(),
+            None => 768 * 1024,
+        },
+    };
+    let cache_max_count = match settings.get_str("cache_max_count") {
+        Ok(cache_max_count_cfg) => match cli_args.value_of("cache_max_count") {
+            Some(cache_max_count_opt) => cache_max_count_opt.parse::<u64>().unwrap(),
+            None => cache_max_count_cfg.parse::<u64>().unwrap(),
+        },
+        Err(_) => match cli_args.value_of("cache_max_count") {
+            Some(cache_max_count_opt) => cache_max_count_opt.parse::<u64>().unwrap(),
+            None => 10,
+        },
+    };
 
     unsafe {
         METRICS.server_addr = server.clone();
-    }
-    let http_user_var = "HTTP_USER";
-    let http_pass_var = "HTTP_PASS";
-
-    let http_user = match env::var_os(http_user_var) {
-        Some(val) => {
-            info!(
-                "Variable {} is set. Will be used for http auth as user.",
-                http_user_var
-            );
-            val.to_str().unwrap().to_string()
-        }
-        None => {
-            info!("{} is not defined in the environment.", http_user_var);
-            "".to_string()
-        }
-    };
-    let http_pass = match env::var_os(http_pass_var) {
-        Some(val) => {
-            info!(
-                "Variable {} is set. Will be used for http auth as password.",
-                http_pass_var
-            );
-            val.to_str().unwrap().to_string()
-        }
-        None => {
-            info!("{} is not defined in the environment.", http_pass_var);
-            "".to_string()
-        }
-    };
-    unsafe {
         let mut buf = String::new();
         buf.push_str(&http_user);
         buf.push_str(":");
@@ -555,16 +636,15 @@ fn main() {
     let lib = match get_tracks(&server) {
         Ok(library) => library,
         Err(err) => {
-            error!("Can't fetch library from remote server. Probably server not running or auth failed.");
+            error!("Can't fetch library from remote server. Probably server is not running or auth failed. {}", err);
             error!(
-                "Provide Basic Auth credentials by setting envs {} and {}",
-                http_user_var, http_pass_var
+                "Provide Basic Auth credentials by setting envs MUS_HTTP_USER and MUS_HTTP_PASS or providing config.",
             );
-            panic!("Error: {}", err);
+            process::exit(0x0001)
         }
     };
     info!("Remote library host: {}", &server);
-    let fs = JsonFilesystem::new(&lib, server);
+    let fs = JsonFilesystem::new(&lib, server, cache_max_count, cache_head);
     let options = [
         "-o",
         "ro",
@@ -574,17 +654,19 @@ fn main() {
         "sync_read",
         "-o",
         "auto_unmount",
+        "-o",
+        "allow_other",
     ]
     .iter()
     .map(|o| o.as_ref())
     .collect::<Vec<&OsStr>>();
 
     info!(
-        "Caching {}B bytes in head of files.",
-        SizeFormatterBinary::new(CACHE_HEAD as u64)
+        "Caching {}B in head of files.",
+        SizeFormatterBinary::new(cache_head as u64)
     );
-    info!("Max cache is {} files.", MAX_CACHE_SIZE);
-    info!("Mount options: {:?}", options);
+    info!("Max cache is {} files.", cache_max_count);
+    info!("Fuse mount options: {:?}", options);
     let _mount: fuse::BackgroundSession;
     unsafe {
         _mount = fuse::spawn_mount(fs, &mountpoint, &options).expect("Couldn't mount filesystem");
