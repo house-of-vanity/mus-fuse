@@ -1,13 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 
-post_install() {
+if systemctl | grep -Fq 'mus-fuse'; then    
+  sudo systemctl stop mus-fuse.service
+fi
 
-  if systemctl | grep -Fq 'mus-fuse'; then
-    sudo systemctl stop mus-fuse.service
-  fi
+adduser --quiet --system --group --no-create-home --home /run/mus-fuse mus-fuse
+mkdir -p /srv/mus-fuse
+chown mus-fuse:mus-fuse /srv/mus-fuse
 
-  sudo useradd --system --user-group --no-create-home --home-dir /run/mus-fuse mus-fuse
-  mkdir -p /srv/mus-fuse
-  chown mus-fuse:mus-fuse /srv/mus-fuse
-  echo ":: You need to uncomment 'user_allow_other' in /etc/fuse.conf"
-}
