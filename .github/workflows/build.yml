@@ -70,6 +70,7 @@ jobs:
         run: |
           echo ${GITHUB_REF/refs\/tags\/v/}
           echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+          echo ::set-output name=FULL_TAG::${GITHUB_REF/refs\/tags\//}
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -95,11 +96,14 @@ jobs:
         with:
           name: mus-fuse_amd64.deb
           path: ./artifacts/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
-      - uses: AButler/upload-release-assets@v2.0
-        with:
-          files: '/home/runner/work/mus-fuse/mus-fuse/artifacts/*'
-          release-tag: ${{ github.ref }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload binary assets
+        run: |
+           wget https://github.com/aktau/github-release/releases/download/v0.7.2/linux-amd64-github-release.tar.bz2
+           tar xjf linux-amd64-github-release.tar.bz2
+           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+           ./bin/linux/amd64/github-release upload -u house-of-vanity -r mus-fuse --tag ${{ steps.get_version.outputs.FULL_TAG }} --name mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb --file ./artifacts/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
+           ./bin/linux/amd64/github-release upload -u house-of-vanity -r mus-fuse --tag ${{ steps.get_version.outputs.FULL_TAG }} --name arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst --file ./artifacts/arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst
+           ./bin/linux/amd64/github-release upload -u house-of-vanity -r mus-fuse --tag ${{ steps.get_version.outputs.FULL_TAG }} --name mus-fuse-${{ steps.get_version.outputs.VERSION }} --file ./artifacts/mus-fuse-${{ steps.get_version.outputs.VERSION }}
 #     - name: Upload Arch Linux Release
 #       uses: actions/upload-release-asset@v1
 #       env:
