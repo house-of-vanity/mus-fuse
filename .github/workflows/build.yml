@@ -78,6 +78,7 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: mus-fuse_amd64.deb
+      - run: ls -lah /home/runner/work/mus-fuse/mus-fuse/
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -103,7 +104,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./mus-fuse/mus-fuse_amd64.deb
+          asset_path: /home/runner/work/mus-fuse/mus-fuse/mus-fuse_amd64.deb
           asset_name: mus-fuse_amd64.deb
           asset_content_type: application/vnd.debian.binary-package;
       - name: Upload Arch Linux Release
