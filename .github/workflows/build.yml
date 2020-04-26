@@ -98,7 +98,8 @@ jobs:
           path: ./artifacts/
       - name: Upload binary assets
         run: |
-           apt install tree
+           sudo apt-get update
+           sudo apt-get install -y tree
            tree ./
            ls -lh ./artifacts
            wget https://github.com/aktau/github-release/releases/download/v0.7.2/linux-amd64-github-release.tar.bz2
