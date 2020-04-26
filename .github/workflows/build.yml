@@ -99,7 +99,7 @@ jobs:
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./artifacts/*
+          file: /home/runner/work/mus-fuse/mus-fuse/artifacts/*
           tag: ${{ github.ref }}
           overwrite: true
           file_glob: true
