@@ -37,7 +37,6 @@ jobs:
           with:
             PKGBUILD: $GITHUB_WORKSPACE/.github/workflows/PKGBUILD
             OUTDIR: $HOME/arch-packages
-        - run: ls -l $HOME/arch-packages
         - run: mv $HOME/arch-packages/*pkg.tar.zst mus-fuse-x86_64.pkg.tar.zst
         - name: Upload Arch Package
           uses: actions/upload-artifact@v1
@@ -66,6 +65,11 @@ jobs:
     needs: [make_bin, make_deb, make_arch]
     runs-on: ubuntu-latest
     steps:
+      - name: Get the version (git tag)
+        id: get_version
+        run: |
+          echo ${GITHUB_REF/refs\/tags\/v/}
+          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -80,6 +84,7 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: mus-fuse
+      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
       - name: Upload Binary Release
         uses: actions/upload-release-asset@v1
         env:
@@ -87,12 +92,14 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./mus-fuse/mus-fuse
-          asset_name: mus-fuse
+          asset_name: mus-fuse-${{ steps.get_version.outputs.VERSION }}
           asset_content_type: application/x-pie-executable;
+      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
       - name: Download Arch Package
         uses: actions/download-artifact@v1
         with:
           name: arch_linux_mus-fuse-x86_64.pkg.tar.zst
+      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
       - name: Upload Arch Linux Release
         uses: actions/upload-release-asset@v1
         env:
@@ -100,19 +107,20 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./mus-fuse/arch_linux_mus-fuse-x86_64.pkg.tar.zst
-          asset_name: arch_linux_mus-fuse-x86_64.pkg.tar.zst
+          asset_name: arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst
           asset_content_type: application/zstd;
+      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
       - name: Download Deb Package
         uses: actions/download-artifact@v1
         with:
           name: mus-fuse_amd64.deb
-      - run: ls -lah /home/runner/work/mus-fuse/mus-fuse/
+      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
       - name: Upload Deb Release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /home/runner/work/mus-fuse/mus-fuse/mus-fuse_amd64.deb
+          asset_path: ./mus-fuse/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
           asset_name: mus-fuse_amd64.deb
           asset_content_type: application/vnd.debian.binary-package;
