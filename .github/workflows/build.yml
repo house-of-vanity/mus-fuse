@@ -17,17 +17,18 @@ jobs:
       steps:
         - uses: actions/checkout@v2
         - name: Build Arch Linux package
-          uses: FFY00/build-arch-package@master
+          uses: house-of-vanity/build-arch-package@master
           with:
             PKGBUILD: $GITHUB_WORKSPACE/.github/workflows/PKGBUILD
             OUTDIR: ./
         - run: pwd
         - run: ls -l
-        - run: mv ./*tar.xz mus-fuse-x86_64.tar.xz
+        - run: echo mus-fuse-${{ github.ref }}-x86_64.pkg.tar.xz
+        - run: mv ./*tar.xz mus-fuse-x86_64.pkg.tar.xz
         - name: Upload Arch Package
           uses: actions/upload-artifact@v1
           with:
-            name: mus-fuse-x86_64.tar.xz
+            name: mus-fuse-x86_64.pkg.tar.xz
             path: ./mus-fuse-x86_64.tar.xz
 
   make_bin:
