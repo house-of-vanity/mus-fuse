@@ -22,11 +22,11 @@ jobs:
             PKGBUILD: $GITHUB_WORKSPACE/.github/workflows/PKGBUILD
             OUTDIR: $HOME/arch-packages
         - run: mv *tar.xz mus-fuse-x86_64.tar.xz
-      - name: Upload Arch Package
-        uses: actions/upload-artifact@v1
-        with:
-          name: mus-fuse-x86_64.tar.xz
-          path: ./mus-fuse-x86_64.tar.xz
+        - name: Upload Arch Package
+          uses: actions/upload-artifact@v1
+          with:
+            name: mus-fuse-x86_64.tar.xz
+            path: ./mus-fuse-x86_64.tar.xz
 
   make_bin:
     name: Build binary
@@ -67,52 +67,52 @@ jobs:
     needs: [build_bin, make_deb, make_arch]
     runs-on: ubuntu-latest
     steps:
-    - name: Download binary
-      uses: actions/download-artifact@v1
-      with:
-        name: mus-fuse
-    - name: Download Arch Package
-      uses: actions/download-artifact@v1
-      with:
-        name: mus-fuse-x86_64.tar.xz
-    - name: Download Deb Package
-      uses: actions/download-artifact@v1
-      with:
-        name: mus-fuse_amd64.deb
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
-    - name: Upload Binary Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./mus-fuse/mus-fuse
-        asset_name: mus-fuse
-        asset_content_type: application/x-pie-executable;
-    - name: Upload Deb Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./mus-fuse/mus-fuse_amd64.deb
-        asset_name: mus-fuse_amd64.deb
-        asset_content_type: application/vnd.debian.binary-package;
-    - name: Upload Arch Linux Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./mus-fuse/mus-fuse-x86_64.tar.xz
-        asset_name: arch_linux_mus-fuse-x86_64.tar.xz
-        asset_content_type: application/x-xz;
+      - name: Download binary
+        uses: actions/download-artifact@v1
+        with:
+          name: mus-fuse
+      - name: Download Arch Package
+        uses: actions/download-artifact@v1
+        with:
+          name: mus-fuse-x86_64.tar.xz
+      - name: Download Deb Package
+        uses: actions/download-artifact@v1
+        with:
+          name: mus-fuse_amd64.deb
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Upload Binary Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mus-fuse/mus-fuse
+          asset_name: mus-fuse
+          asset_content_type: application/x-pie-executable;
+      - name: Upload Deb Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mus-fuse/mus-fuse_amd64.deb
+          asset_name: mus-fuse_amd64.deb
+          asset_content_type: application/vnd.debian.binary-package;
+      - name: Upload Arch Linux Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mus-fuse/mus-fuse-x86_64.tar.xz
+          asset_name: arch_linux_mus-fuse-x86_64.tar.xz
+          asset_content_type: application/x-xz;
