@@ -6,6 +6,20 @@ on:
     - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
+  make:
+      runs-on: ubuntu-latest
+      container:
+        image: archlinux
+        options: --privileged
+        volumes:
+          - /sys/fs/cgroup:/sys/fs/cgroup
+      steps:
+        - uses: actions/checkout@v2
+        - name: Build Arch Linux package
+          uses: FFY00/build-arch-package@master
+          with:
+            PKGBUILD: $GITHUB_WORKSPACE/.github/workflows/PKGBUILD
+            OUTDIR: $HOME/arch-packages
   build:
     name: Upload Release Asset
     runs-on: ubuntu-latest

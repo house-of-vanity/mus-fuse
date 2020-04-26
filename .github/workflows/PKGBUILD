@@ -1,0 +1,39 @@
+# Maintainer: Alexandr Bogomyakov (ultradesu) <ab@hexor.ru>
+
+pkgname=mus-fuse
+pkgver=0.7.2
+pkgrel=1
+pkgdesc="Written safely in Rust, FUSE FS with your own private music library hosted on your server securely."
+url="https://github.com/house-of-vanity/mus-fuse.git"
+arch=(x86_64)
+license=(WTFPL)
+depends=(openssl fuse)
+makedepends=(cargo git fuse openssl)
+source=("git+https://github.com/house-of-vanity/$pkgname")
+sha512sums=('SKIP')
+backup=('etc/mus-fuse.yml')
+
+pkgver() {
+  cd "$srcdir/$pkgname"
+  echo git describe --long --tags | awk -F '-' '{print $1}'| sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd $pkgname-$pkgver
+  cargo fetch --target x86_64-unknown-linux-gnu
+}
+
+build() {
+  cd $pkgname-$pkgver
+  cargo build --release --frozen --all-targets
+}
+
+package() {
+  cd $pkgname-$pkgver
+  install -Dt "$pkgdir/usr/bin" target/release/$pkgname
+  install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 README.md
+  install -Dt "$pkgdir/usr/lib/systemd/system" assets/$pkgname.service
+  mkdir -p "$pkgdir/etc"
+  cp -n assets/mus-fuse.yml "$pkgdir/etc/mus-fuse.yml"
+}
+

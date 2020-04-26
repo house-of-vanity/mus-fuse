@@ -1,6 +1,6 @@
 [package]
 name = "mus-fuse"
-version = "0.7.1"
+version = "0.7.2"
 authors = ["AB <ultradesu@hexor.ru>"]
 edition = "2018"
 license = "WTFPL"
@@ -37,10 +37,10 @@ Written safely in Rust, FUSE FS with your own private music library \
 hosted on your server securely."""
 section = "utilities"
 priority = "optional"
-maintainer-scripts = "assets/"
+maintainer-scripts = "debian/"
 conf-files = ["etc/mus-fuse.yml"]
 assets = [
    ["assets/mus-fuse.service", "/usr/lib/systemd/system/mus-fuse.service", "644"],
    ["target/release/mus-fuse", "usr/bin/", "755"],
-   ["assets/conf.yml", "etc/mus-fuse.yml", "644"],
+   ["assets/mus-fuse.yml", "etc/mus-fuse.yml", "644"],
 ]

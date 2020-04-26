@@ -16,8 +16,13 @@ MusFuse is a FUSE filesystem over HTTP for music. It is using [playongo](https:/
 Here is a [binary release](https://github.com/house-of-vanity/mus_fuse/releases/latest) or compile it yourself. Anyway mind about dependencies listed below. Also there is a systemd unit file for managing service. Place it into `~/.config/systemd/user/mus-fuse.service`
 
 ```sh
-# Compile
+# Compile binary
 $ cargo build --release
+
+# Making DEB package
+$ cargo install cargo-deb
+$ cargo deb
+# package will be appear in ./target/debian/
 
 # And run
 # to baypass Basic Auth set 
