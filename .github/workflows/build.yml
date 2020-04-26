@@ -80,7 +80,7 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: mus-fuse
-      - me: Upload Binary Release
+      - name: Upload Binary Release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
