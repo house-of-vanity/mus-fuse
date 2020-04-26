@@ -89,6 +89,7 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+      - uses: actions/checkout@v2
       - run: |
           set -x
           assets=()
