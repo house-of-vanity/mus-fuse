@@ -573,10 +573,7 @@ fn main() {
     };
     let http_pass = match settings.get_str("http_pass") {
         Ok(u) => u,
-        Err(_) => {
-            info!("User for basic auth is not defined.");
-            String::new()
-        }
+        Err(_) => String::new(),
     };
     let server = match settings.get_str("server") {
         Ok(server_cfg) => match cli_args.value_of("server") {
