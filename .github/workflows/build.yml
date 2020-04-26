@@ -70,16 +70,16 @@ jobs:
         run: |
           echo ${GITHUB_REF/refs\/tags\/v/}
           echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-#     - name: Create Release
-#       id: create_release
-#       uses: actions/create-release@v1
-#       env:
-#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#       with:
-#         tag_name: ${{ github.ref }}
-#         release_name: Release ${{ github.ref }}
-#         draft: false
-#         prerelease: false
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
       - name: Download binary
         uses: actions/download-artifact@v1
         with:
@@ -95,16 +95,11 @@ jobs:
         with:
           name: mus-fuse_amd64.deb
           path: ./artifacts/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
-      - uses: meeDamian/github-release@2.0
+      - uses: AButler/upload-release-assets@v2.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref }}
-          name: Release ${{ github.ref }}
-          allow_override: true
-          files: >
-            ./artifacts/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
-            ./artifacts/arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst
-            ./artifacts/mus-fuse-${{ steps.get_version.outputs.VERSION }}
+          files: 'artifacts/*'
+          release-tag: ${{ github.ref }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 #     - name: Upload Arch Linux Release
 #       uses: actions/upload-release-asset@v1
 #       env:
