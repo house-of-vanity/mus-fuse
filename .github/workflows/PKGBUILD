@@ -15,24 +15,26 @@ backup=('etc/mus-fuse.yml')
 
 pkgver() {
   cd "$srcdir/$pkgname"
-  git describe --long --tags | awk -F '-' '{print $1}'| sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+  echo git describe --long --tags | awk -F '-' '{print $1}'| sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {
-  cd "$srcdir/$pkgname"
+  cd $pkgname-$pkgver
   cargo fetch --target x86_64-unknown-linux-gnu
 }
 
 build() {
-  cd "$srcdir/$pkgname"
+  cd $pkgname-$pkgver
   cargo build --release --frozen --all-targets
 }
 
 package() {
-  cd "$srcdir/$pkgname"
+  cd $pkgname-$pkgver
+  install=mus-fuse.install
   install -Dt "$pkgdir/usr/bin" target/release/$pkgname
   install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 README.md
   install -Dt "$pkgdir/usr/lib/systemd/system" assets/$pkgname.service
   mkdir -p "$pkgdir/etc"
   cp -n assets/mus-fuse.yml "$pkgdir/etc/mus-fuse.yml"
 }
+
