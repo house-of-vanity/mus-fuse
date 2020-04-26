@@ -69,7 +69,7 @@ jobs:
         id: get_version
         run: |
           echo ${GITHUB_REF/refs\/tags\/v/}
-          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -84,43 +84,49 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: mus-fuse
-      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
-      - name: Upload Binary Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./mus-fuse/mus-fuse
-          asset_name: mus-fuse-${{ steps.get_version.outputs.VERSION }}
-          asset_content_type: application/x-pie-executable;
-      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
+          path: ./artifacts/mus-fuse-${{ steps.get_version.outputs.VERSION }}
       - name: Download Arch Package
         uses: actions/download-artifact@v1
         with:
           name: arch_linux_mus-fuse-x86_64.pkg.tar.zst
-      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
-      - name: Upload Arch Linux Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./mus-fuse/arch_linux_mus-fuse-x86_64.pkg.tar.zst
-          asset_name: arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst
-          asset_content_type: application/zstd;
-      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
+          path: ./artifacts/arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst
       - name: Download Deb Package
         uses: actions/download-artifact@v1
         with:
           name: mus-fuse_amd64.deb
-      - run: ls -lh /home/runner/work/mus-fuse/mus-fuse/
-      - name: Upload Deb Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: ./artifacts/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v1-release
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./mus-fuse/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
-          asset_name: mus-fuse_amd64.deb
-          asset_content_type: application/vnd.debian.binary-package;
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./artifacts/*
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
+#     - name: Upload Arch Linux Release
+#       uses: actions/upload-release-asset@v1
+#       env:
+#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       with:
+#         upload_url: ${{ steps.create_release.outputs.upload_url }}
+#         asset_path: ./mus-fuse/arch_linux_mus-fuse-x86_64.pkg.tar.zst
+#         asset_name: arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst
+#         asset_content_type: application/zstd;
+#     - name: Upload Deb Release
+#       uses: actions/upload-release-asset@v1
+#       env:
+#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       with:
+#         upload_url: ${{ steps.create_release.outputs.upload_url }}
+#         asset_path: ./mus-fuse/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
+#         asset_name: mus-fuse_amd64.deb
+#         asset_content_type: application/vnd.debian.binary-package;
+#     - name: Upload Binary Release
+#       uses: actions/upload-release-asset@v1
+#       env:
+#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       with:
+#         upload_url: ${{ steps.create_release.outputs.upload_url }}
+#         asset_path: ./mus-fuse/mus-fuse
+#         asset_name: mus-fuse-${{ steps.get_version.outputs.VERSION }}
+#         asset_content_type: application/x-pie-executable;
