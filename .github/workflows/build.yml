@@ -73,7 +73,7 @@ jobs:
       - name: Download Arch Package
         uses: actions/download-artifact@v1
         with:
-          name: mus-fuse-x86_64.tar.xz
+          name: arch_linux_mus-fuse-x86_64.pkg.tar.zst
       - name: Download Deb Package
         uses: actions/download-artifact@v1
         with:
