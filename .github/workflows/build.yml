@@ -64,7 +64,7 @@ jobs:
 
   publish:
     name: Publish release
-    needs: [build_bin, make_deb, make_arch]
+    needs: [make_bin, make_deb, make_arch]
     runs-on: ubuntu-latest
     steps:
       - name: Download binary
