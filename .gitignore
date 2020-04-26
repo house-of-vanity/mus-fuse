@@ -1,5 +1,5 @@
 /target
-mus-fuse.yml
+/mus-fuse.yml
 Cargo.lock
 /mnt
 .vscode/
