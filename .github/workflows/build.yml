@@ -97,7 +97,7 @@ jobs:
           path: ./artifacts/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
       - uses: AButler/upload-release-assets@v2.0
         with:
-          files: 'artifacts/*'
+          files: '/home/runner/work/mus-fuse/mus-fuse/artifacts/*'
           release-tag: ${{ github.ref }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 #     - name: Upload Arch Linux Release
