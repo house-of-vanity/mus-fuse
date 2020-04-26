@@ -112,6 +112,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./mus-fuse/mus-fuse-x86_64.tar.xz
-          asset_name: arch_linux_mus-fuse-x86_64.tar.xz
-          asset_content_type: application/x-xz;
+          asset_path: ./mus-fuse/arch_linux_mus-fuse-x86_64.pkg.tar.zst
+          asset_name: arch_linux_mus-fuse-x86_64.pkg.tar.zst
+          asset_content_type: application/zstd;
