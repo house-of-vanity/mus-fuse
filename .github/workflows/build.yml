@@ -21,15 +21,12 @@ jobs:
           with:
             PKGBUILD: $GITHUB_WORKSPACE/.github/workflows/PKGBUILD
             OUTDIR: ./
-        - run: pwd
-        - run: ls -l
-        - run: echo mus-fuse-${{ github.ref }}-x86_64.pkg.tar.xz
-        - run: mv ./*tar.xz mus-fuse-x86_64.pkg.tar.xz
+        - run: mv ./*pkg.tar.zst mus-fuse-x86_64.pkg.tar.zst
         - name: Upload Arch Package
           uses: actions/upload-artifact@v1
           with:
-            name: mus-fuse-x86_64.pkg.tar.xz
-            path: ./mus-fuse-x86_64.tar.xz
+            name: arch_linux_mus-fuse-x86_64.pkg.tar.zst
+            path: ./mus-fuse-x86_64.pkg.tar.zst
 
   make_bin:
     name: Build binary

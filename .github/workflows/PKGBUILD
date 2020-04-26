@@ -5,10 +5,10 @@ pkgver=0.7.2
 pkgrel=1
 pkgdesc="Written safely in Rust, FUSE FS with your own private music library hosted on your server securely."
 url="https://github.com/house-of-vanity/mus-fuse.git"
-arch=(x86_64)
-license=(WTFPL)
+arch=($CARCH)
+license=(WTFPL custom)
 depends=(openssl fuse)
-makedepends=(cargo git fuse openssl)
+makedepends=(cargo git)
 source=("git+https://github.com/house-of-vanity/$pkgname")
 sha512sums=('SKIP')
 backup=('etc/mus-fuse.yml')
@@ -20,7 +20,7 @@ pkgver() {
 
 prepare() {
   cd "$srcdir/$pkgname"
-  cargo fetch --target x86_64-unknown-linux-gnu
+  cargo fetch --target $CARCH-unknown-linux-gnu
 }
 
 build() {
@@ -34,6 +34,7 @@ package() {
   install -Dt "$pkgdir/usr/bin" target/release/$pkgname
   install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 README.md
   install -Dt "$pkgdir/usr/lib/systemd/system" assets/$pkgname.service
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   mkdir -p "$pkgdir/etc"
   cp -n assets/mus-fuse.yml "$pkgdir/etc/mus-fuse.yml"
 }
