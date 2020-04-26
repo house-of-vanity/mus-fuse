@@ -21,6 +21,10 @@ jobs:
           with:
             PKGBUILD: $GITHUB_WORKSPACE/.github/workflows/PKGBUILD
             OUTDIR: $HOME/arch-packages
+        - run: |
+        pwd
+        ls -l 
+        ls -l $HOME/arch-packages/
         - run: mv $HOME/arch-packages/*tar.xz mus-fuse-x86_64.tar.xz
         - name: Upload Arch Package
           uses: actions/upload-artifact@v1
