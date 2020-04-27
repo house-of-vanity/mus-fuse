@@ -1,0 +1,36 @@
+.\" Manpage for mus-fuse.
+.\" Contact ultradesu@hexor.ru to correct errors or typos.
+.TH man 8 "27 Apr 2020" "0.7.2" "mus-fuse man page"
+.SH NAME
+mus-fuse \- mount a FUSE filesystem with music from remote server over HTTPs.
+.SH SYNOPSIS
+mus-fuse [OPTIONS]
+.SH DESCRIPTION
+MusFuse is a FUSE filesystem over HTTP for music. It is using playongo media library. It's completely written in Rust stable.
+.SH FEATURES
+Using self hosted media library.
+.br
+Security relies on HTTPS.
+.br
+Any player can be used.
+.br
+Using cache.
+.br
+Leverages Rust correctness.
+.SH OPTIONS
+    --cache-head <KiB>     How many KiB cache in file beginning for speeding up metadata requests. [default: 768]
+.br
+    --cache-max <COUNT>    How many files store in cache. [default: 10]
+.br
+-c, --config <PATH>        Config file to use [default: /etc/mus-fuse.yaml]
+.br
+-m, --mountpoint <PATH>    Mount point for library
+.br
+-s, --server <ADDRESS>     Sets a server hosting your library with schema. (https or http)
+.br
+.SH SEE ALSO
+fuse(8)
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+AB (ultradesu@hexor.ru)
