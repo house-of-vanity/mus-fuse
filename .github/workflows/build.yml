@@ -85,49 +85,33 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: mus-fuse
-          path: ./artifacts/
+          path: ./
       - name: Download Arch Package
         uses: actions/download-artifact@v1
         with:
           name: arch_linux_mus-fuse-x86_64.pkg.tar.zst
-          path: ./artifacts/
+          path: ./
       - name: Download Deb Package
         uses: actions/download-artifact@v1
         with:
           name: mus-fuse_amd64.deb
-          path: ./artifacts/
+          path: ./
       - name: Upload binary assets
         run: |
            wget https://github.com/aktau/github-release/releases/download/v0.7.2/linux-amd64-github-release.tar.bz2
            tar xjf linux-amd64-github-release.tar.bz2
            export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-           ./bin/linux/amd64/github-release upload -u house-of-vanity -r mus-fuse --tag ${{ steps.get_version.outputs.FULL_TAG }} --name mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb --file ./artifacts/mus-fuse_amd64.deb
-           ./bin/linux/amd64/github-release upload -u house-of-vanity -r mus-fuse --tag ${{ steps.get_version.outputs.FULL_TAG }} --name arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst --file ./artifacts/mus-fuse-x86_64.pkg.tar.zst
-           ./bin/linux/amd64/github-release upload -u house-of-vanity -r mus-fuse --tag ${{ steps.get_version.outputs.FULL_TAG }} --name mus-fuse-${{ steps.get_version.outputs.VERSION }} --file ./artifacts/mus-fuse
-#     - name: Upload Arch Linux Release
-#       uses: actions/upload-release-asset@v1
-#       env:
-#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#       with:
-#         upload_url: ${{ steps.create_release.outputs.upload_url }}
-#         asset_path: ./mus-fuse/arch_linux_mus-fuse-x86_64.pkg.tar.zst
-#         asset_name: arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst
-#         asset_content_type: application/zstd;
-#     - name: Upload Deb Release
-#       uses: actions/upload-release-asset@v1
-#       env:
-#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#       with:
-#         upload_url: ${{ steps.create_release.outputs.upload_url }}
-#         asset_path: ./mus-fuse/mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb
-#         asset_name: mus-fuse_amd64.deb
-#         asset_content_type: application/vnd.debian.binary-package;
-#     - name: Upload Binary Release
-#       uses: actions/upload-release-asset@v1
-#       env:
-#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#       with:
-#         upload_url: ${{ steps.create_release.outputs.upload_url }}
-#         asset_path: ./mus-fuse/mus-fuse
-#         asset_name: mus-fuse-${{ steps.get_version.outputs.VERSION }}
-#         asset_content_type: application/x-pie-executable;
+           ./bin/linux/amd64/github-release upload -u house-of-vanity -r mus-fuse --tag ${{ steps.get_version.outputs.FULL_TAG }} --name mus-fuse_${{ steps.get_version.outputs.VERSION }}_amd64.deb --file ./mus-fuse_amd64.deb
+           ./bin/linux/amd64/github-release upload -u house-of-vanity -r mus-fuse --tag ${{ steps.get_version.outputs.FULL_TAG }} --name arch_linux_mus-fuse-${{ steps.get_version.outputs.VERSION }}-x86_64.pkg.tar.zst --file ./mus-fuse-x86_64.pkg.tar.zst
+           ./bin/linux/amd64/github-release upload -u house-of-vanity -r mus-fuse --tag ${{ steps.get_version.outputs.FULL_TAG }} --name mus-fuse-${{ steps.get_version.outputs.VERSION }} --file ./mus-fuse
+
+      # SCP to arch repo
+      - name: Copy package to repository
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: github_deploy
+          port: 22
+          key: ${{ secrets.SSH_KEY }}
+          source: "./mus-fuse-x86_64.pkg.tar.zst"
+          target: "/srv/arch-repo/"
